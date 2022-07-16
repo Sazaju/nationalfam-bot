@@ -1,6 +1,6 @@
 // Require the necessary discord.js classes
 const { Client, Intents } = require('discord.js');
-const { token } = require('./config.json');
+const { token, raidChannel } = require('./config.json');
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
@@ -13,6 +13,16 @@ client.once('ready', () => {
 /**********
  * UTILS *
  **********/
+
+function log(message) {
+	const now = new Date();
+	const time = now.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+	console.log(time + ': ' + message);
+}
+
+const second = 1000;
+const minute = 60*second;
+const hour = 60*minute;
 
 function millisecondsBetween(date1, date2) {
 	return date2.getTime() - date1.getTime();
@@ -30,17 +40,15 @@ function formatDuration(timestamp) {
 		return seconds+"s";
 	}
 	
-	seconds++;
 	var minutes = Math.floor(seconds / 60);
 	var seconds = seconds % 60;
 	if (minutes < 60) {
-		return minutes+"m"+String(seconds).padStart(2, '0')+"s";
+		return minutes+"m"+(seconds == 0 ? "" : String(seconds).padStart(2, '0')+"s");
 	}
 	
-	minutes++;
 	var hours = Math.floor(minutes / 60);
 	var minutes = minutes % 60;
-	return hours+"h"+String(minutes).padStart(2, '0');
+	return hours+"h"+(minutes == 0 ? "" : String(minutes).padStart(2, '0'));
 }
 
 /*************
@@ -63,8 +71,7 @@ class RaidStatus {
 class RaidPeriod {
 	constructor(date, hours, minutes) {
 		this.start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0);
-		const oneHour = 60*60*1000;
-		this.end = new Date(this.start.getTime() + oneHour);
+		this.end = new Date(this.start.getTime() + 1*hour);
 	}
 	
 	toString() {
@@ -73,8 +80,7 @@ class RaidPeriod {
 	}
 	
 	nextDay() {
-		const oneDay = 24*60*60*1000;
-		const tomorrow = new Date(this.start.getTime() + oneDay);
+		const tomorrow = new Date(this.start.getTime() + 24*hour);
 		return new RaidPeriod(tomorrow, this.start.getHours(), this.start.getMinutes());
 	}
 	
@@ -134,17 +140,24 @@ function raidInfo(user) {
 }
 
 function raidReminder() {
-	var now = new Date();
+	const now = new Date();
+	const info = RaidInfo.at(now);
 	
+	if (info.status == RaidStatus.Running) {
+		const wait = millisecondsBetween(now, info.period.end) + 1*minute;
+		log('rappel pour '+formatTime(info.period.start)+', prochain check dans '+formatDuration(wait));
+		const channel = client.channels.cache.get(raidChannel);
+		channel.send("@everyone Le raid de "+formatTime(info.period.start)+" est en cours !");
+		setTimeout(raidReminder, wait);
+	} else {// Waiting case
+		const wait = Math.max(1*second, info.duration);
+		log('prochain raid '+info.period+', prochain check dans '+formatDuration(wait));
+		setTimeout(raidReminder, wait);
+	}
 	
-	const channel = client.channels.cache.get('997549608936947813');
-	channel.send('@everyone test');
 	return 'Done';
 }
-//setTimeout(raidReminder, 1000)
-// TODO Automatic raid reminder
-// setTimeout
-// setInterval
+client.once('ready', () => raidReminder());
 
 /********
  * MAIN *
