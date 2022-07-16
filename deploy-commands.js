@@ -5,8 +5,9 @@ const { clientId, guildId, token } = require('./config.json');
 
 const commands = [
 	new SlashCommandBuilder().setName('ping').setDescription('Fait répondre "pong!" au bot, juste pour s\'assurer qu\'il fonctionne.'),
-	new SlashCommandBuilder().setName('mascotte').setDescription('Chambre à la demande'),
-	new SlashCommandBuilder().setName('raid').setDescription('Affiche les informations de raid'),
+	new SlashCommandBuilder().setName('raid').setDescription('Affiche les informations de raid.'),
+	new SlashCommandBuilder().setName('raid2').setDescription('temp'),
+	new SlashCommandBuilder().setName('dev-source').setDescription('Code source de ce bot.'),
 ]
 	.map(command => command.toJSON());
 
