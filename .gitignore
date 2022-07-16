@@ -1,0 +1,6 @@
+# Sensitive data
+.env
+config.json
+
+# Retrievable through: npm install
+node_modules
