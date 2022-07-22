@@ -2,7 +2,7 @@ const second = 1000;
 const minute = 60*second;
 const hour = 60*minute;
 
-const durationRegex = new RegExp("P(?:([0-9]+)Y)?(?:([0-9]+)M)?(?:([0-9]+)D)?T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?");
+const durationRegex = new RegExp("^P(?:([0-9]+)Y)?(?:([0-9]+)M)?(?:([0-9]+)D)?T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?$");
 function parseDuration(string) {
 	const matches = string.match(durationRegex);
 	if (matches === null) {
