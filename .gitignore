@@ -4,3 +4,6 @@ config.json
 
 # Retrievable through: npm install
 node_modules
+
+# Generated test coverage data
+coverage/*
