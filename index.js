@@ -1,6 +1,7 @@
 // Require the necessary discord.js classes
 const { Client, Intents } = require('discord.js');
 const { token, channels, safety, raids } = require('./config.json');
+const { Safety } = require('./safety.js');
 const { parseDuration, millisecondsBetween, formatTime, formatDuration } = require('./datetime.js');
 const { RaidInfoFactory, RaidStatus } = require('./raidInfo.js');
 
@@ -16,21 +17,15 @@ client.once('ready', () => {
  * UTILS *
  *********/
 
+const safe = Safety.fromDurations(
+	safety.recall.delay.min,
+	safety.recall.delay.max
+);
+
 function log(message) {
 	const now = new Date();
 	const time = now.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 	console.log(time + ': ' + message);
-}
-
-/**********
- * SAFETY *
- **********/
-
-function safeRecallDelay(delay) {
-	const limits = safety.recall.delay;
-	const min = parseDuration(limits.min).milliseconds();
-	const max = parseDuration(limits.max).milliseconds();
-	return Math.max(min, Math.min(delay, max));
 }
 
 /*************
@@ -58,13 +53,13 @@ function remindNextRaid() {
 	if (info.status == RaidStatus.Running) {
 		const runningDuration = millisecondsBetween(now, info.period.end);
 		const safetyDuration = parseDuration(safety.recall.delay.afterRun).milliseconds();
-		const recallDelay = safeRecallDelay(runningDuration + safetyDuration);
+		const recallDelay = safe.recallDelay(runningDuration + safetyDuration);
 		log('rappel pour '+formatTime(info.period.start)+', prochain check dans '+formatDuration(recallDelay));
 		const channel = client.channels.cache.get(channels.raids.id);
 		channel.send("@everyone Le raid de "+formatTime(info.period.start)+" est en cours !");
 		setTimeout(remindNextRaid, recallDelay);
 	} else {// Waiting case
-		const recallDelay = safeRecallDelay(info.remaining);
+		const recallDelay = safe.recallDelay(info.remaining);
 		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 		log('prochain raid ['+formatDate(info.period.start)+' ; '+formatDate(info.period.end)+'], prochain check dans '+formatDuration(recallDelay));
 		setTimeout(remindNextRaid, recallDelay);
