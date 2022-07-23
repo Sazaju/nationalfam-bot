@@ -87,11 +87,9 @@ client.on('interactionCreate', async interaction => {
 		await interaction.reply("Mon code source se trouve là :\nhttps://github.com/Sazaju/nationalfam-bot");
 	} else if (commandName === 'raid') {
 		// TODO Only in raid channel
-		// TODO 
-		// TODO Separate testing bot and prod bot
 		await interaction.reply(raidInfoFor(interaction.user));
 	}
 });
 
-// Login to Discord with your client's token
+// Login to Discord
 client.login(token);
