@@ -17,3 +17,10 @@ Différentes commandes pour mettre à jour le projet :
 ```
 node index.js
 ```
+
+# Test
+
+
+```
+npm test
+```
