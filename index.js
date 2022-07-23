@@ -2,7 +2,7 @@
 const { Client, Intents } = require('discord.js');
 const { token, channels, safety, raids } = require('./config.json');
 const { parseDuration, millisecondsBetween, formatTime, formatDuration } = require('./datetime.js');
-const { RaidInfo, RaidStatus } = require('./raids.js');
+const { RaidInfoFactory, RaidStatus } = require('./raids.js');
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
@@ -37,22 +37,23 @@ function safeRecallDelay(delay) {
  * RAID INFO *
  *************/
 
-function raidInfo(user) {
+const raidInfo = new RaidInfoFactory(raids);
+function raidInfoFor(user) {
 	const username = user.username;
 	log("infos de raid demandées par "+username);
 	
 	const now = new Date();
-	const info = RaidInfo.at(now);
+	const info = raidInfo.at(now);
 	if (info.status == RaidStatus.Waiting) {
-		return formatDuration(info.duration)+" avant le raid de "+formatTime(info.period.start);
+		return formatDuration(info.remaining)+" avant le raid de "+formatTime(info.period.start);
 	} else {
-		return "Que fais-tu encore là "+username+" ?\nLe raid est en cours !\n"+formatDuration(info.duration)+" avant la fin du raid de "+formatTime(info.period.start);
+		return "Que fais-tu encore là "+username+" ?\nLe raid est en cours !\n"+formatDuration(info.remaining)+" avant la fin du raid de "+formatTime(info.period.start);
 	}
 }
 
-function raidReminder() {
+function remindNextRaid() {
 	const now = new Date();
-	const info = RaidInfo.at(now);
+	const info = raidInfo.at(now);
 	
 	if (info.status == RaidStatus.Running) {
 		const runningDuration = millisecondsBetween(now, info.period.end);
@@ -61,14 +62,15 @@ function raidReminder() {
 		log('rappel pour '+formatTime(info.period.start)+', prochain check dans '+formatDuration(recallDelay));
 		const channel = client.channels.cache.get(channels.raids.id);
 		channel.send("@everyone Le raid de "+formatTime(info.period.start)+" est en cours !");
-		setTimeout(raidReminder, recallDelay);
+		setTimeout(remindNextRaid, recallDelay);
 	} else {// Waiting case
-		const recallDelay = safeRecallDelay(info.duration);
-		log('prochain raid '+info.period+', prochain check dans '+formatDuration(recallDelay));
-		setTimeout(raidReminder, recallDelay);
+		const recallDelay = safeRecallDelay(info.remaining);
+		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+		log('prochain raid ['+formatDate(info.period.start)+' ; '+formatDate(info.period.end)+'], prochain check dans '+formatDuration(recallDelay));
+		setTimeout(remindNextRaid, recallDelay);
 	}
 }
-client.once('ready', () => raidReminder());
+client.once('ready', () => remindNextRaid());
 
 /********
  * MAIN *
@@ -87,7 +89,7 @@ client.on('interactionCreate', async interaction => {
 		// TODO Only in raid channel
 		// TODO 
 		// TODO Separate testing bot and prod bot
-		await interaction.reply(raidInfo(interaction.user));
+		await interaction.reply(raidInfoFor(interaction.user));
 	}
 });
 
