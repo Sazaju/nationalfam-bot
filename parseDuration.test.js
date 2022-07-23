@@ -5,8 +5,8 @@ describe('Non ISO-8601 durations', () => {
 		'foo',
 		'PTSS', 'PTTS', 'PPTS',
 		'PXTS', 'PTXS',
-	])('%p', (str) => {
-		expect(() => parseDuration(str)).toThrow(`Non ISO-8601 duration: ${str}`);
+	])('%p', (string) => {
+		expect(() => parseDuration(string)).toThrow(`Non ISO-8601 duration: ${string}`);
 	});
 });
 
@@ -32,5 +32,13 @@ describe('Parse for milliseconds', () => {
 		
 	`('$duration = $result', ({ duration, result }) => {
 		expect(parseDuration(duration).milliseconds()).toBe(result);
+	});
+});
+
+describe('Unsupported fields', () => {
+	test.each([
+		'P1YT', 'P1MT', 'P1DT', 'P1W'
+	])('%p', (string) => {
+		expect(() => parseDuration(string)).toThrow(`Cannote parse duration '${string}': date fields are not supported`);
 	});
 });
