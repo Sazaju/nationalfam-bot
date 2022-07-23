@@ -1,4 +1,4 @@
-const { RaidInfoFactory, RaidStatus } = require('./raids.js')
+const { RaidInfoFactory, RaidStatus } = require('./raidInfo.js')
 
 describe('Raid info', () => {
 	test.each`
@@ -16,8 +16,7 @@ describe('Raid info', () => {
 		${["T10:23:41","T15:42:36"]} | ${'PT10M'} | ${'1234-05-01T15:52:37'} | ${RaidStatus.Waiting} | ${'1234-05-02T10:23:41'} | ${'1234-05-02T10:33:41'} | ${66664000}
 		${["T10:23:41","T15:42:36"]} | ${'PT10M'} | ${'1234-05-01T23:59:59'} | ${RaidStatus.Waiting} | ${'1234-05-02T10:23:41'} | ${'1234-05-02T10:33:41'} | ${37422000}
 	`('$date in $duration of $starts = remains $remaining ms $status in [$periodStart, $periodEnd]', ({ starts, duration, date, status, periodStart, periodEnd, remaining }) => {
-		const conf = {"starts": starts, "duration": duration};
-		const raidInfo = new RaidInfoFactory(conf);
+		const raidInfo = RaidInfoFactory.fromStartsAndDuration(starts, duration);
 		expect(raidInfo.at(new Date(date))).toMatchObject({
 			period: {
 				start: new Date(periodStart),

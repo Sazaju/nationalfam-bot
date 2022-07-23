@@ -2,7 +2,7 @@
 const { Client, Intents } = require('discord.js');
 const { token, channels, safety, raids } = require('./config.json');
 const { parseDuration, millisecondsBetween, formatTime, formatDuration } = require('./datetime.js');
-const { RaidInfoFactory, RaidStatus } = require('./raids.js');
+const { RaidInfoFactory, RaidStatus } = require('./raidInfo.js');
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
@@ -37,7 +37,7 @@ function safeRecallDelay(delay) {
  * RAID INFO *
  *************/
 
-const raidInfo = new RaidInfoFactory(raids);
+const raidInfo = RaidInfoFactory.fromStartsAndDuration(raids.starts, raids.duration);
 function raidInfoFor(user) {
 	const username = user.username;
 	log("infos de raid demandées par "+username);

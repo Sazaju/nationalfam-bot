@@ -43,21 +43,30 @@ class RaidInfo {
 }
 
 class RaidInfoFactory {
-	constructor(raidsConf) {
-		this.raidsConf = raidsConf;
+	constructor(raids) {
+		this.raids = raids;
 	}
 	
 	at(date) {
-		const raidDuration = parseDuration(this.raidsConf.duration).milliseconds();
-		const raids = this.raidsConf.starts.map(str => {
-			const start = parseTime(str).atDayOf(date);
-			const end = new Date(start.getTime() + raidDuration);
-			return new RaidPeriod(start, end);
-		});
-		const remaining = raids.filter(raid => !raid.isBefore(date));
-		const nextRaid = remaining.length > 0 ? remaining[0] : raids[0].nextDay();
+		const periods = this.raids.map(raid => raid.atDayOf(date));
+		const remaining = periods.filter(period => !period.isBefore(date));
+		const nextRaid = remaining.length > 0 ? remaining[0] : periods[0].nextDay();
 		const dateInfo = nextRaid.infoForDate(date);
 		return new RaidInfo(nextRaid, dateInfo.status, dateInfo.remaining);
+	}
+	
+	static fromStartsAndDuration(starts, duration) {
+		const raidDuration = parseDuration(duration).milliseconds();
+		const raids = starts.map(str => {
+			return {
+				atDayOf: date => {
+					const start = parseTime(str).atDayOf(date);
+					const end = new Date(start.getTime() + raidDuration);
+					return new RaidPeriod(start, end);
+				}
+			};
+		});
+		return new RaidInfoFactory(raids);
 	}
 }
 
