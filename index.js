@@ -2,6 +2,7 @@
 const { Client, Intents } = require('discord.js');
 const { token, channels, safety, raids } = require('./config.json');
 const { Safety } = require('./safety.js');
+const { Reminder } = require('./reminder.js');
 const { parseDuration, millisecondsBetween, formatTime, formatDuration } = require('./datetime.js');
 const { RaidInfoFactory, RaidStatus } = require('./raidInfo.js');
 
@@ -28,44 +29,54 @@ function log(message) {
 	console.log(time + ': ' + message);
 }
 
+const reminder = new Reminder(
+	() => new Date(),
+	(fn) => client.once('ready', fn),
+	(fn, delay) => setTimeout(fn, safe.recallDelay(delay))
+);
+
 /*************
  * RAID INFO *
  *************/
 
-const raidInfo = RaidInfoFactory.fromStartsAndDuration(raids.starts, raids.duration);
+const raidInfo = RaidInfoFactory.parse(raids.starts, raids.duration, raids.recallDelayAfterRun);
 function raidInfoFor(user) {
 	const username = user.username;
 	log("infos de raid demandées par "+username);
 	
 	const now = new Date();
-	const info = raidInfo.at(now);
+	const info = raidInfo.infoAt(now);
+	const start = formatTime(info.period.start);
+	const remaining = formatDuration(info.remaining);
 	if (info.status == RaidStatus.Waiting) {
-		return formatDuration(info.remaining)+" avant le raid de "+formatTime(info.period.start);
+		return remaining+" avant le raid de "+start;
 	} else {
-		return "Que fais-tu encore là "+username+" ?\nLe raid est en cours !\n"+formatDuration(info.remaining)+" avant la fin du raid de "+formatTime(info.period.start);
+		return "Que fais-tu encore là "+username+" ?\nLe raid est en cours !\n"+remaining+" avant la fin du raid de "+start;
 	}
 }
 
-function remindNextRaid() {
-	const now = new Date();
-	const info = raidInfo.at(now);
+function nextRaidReminder(now) {
+	const reminderInfo = raidInfo.reminderAt(now);
+	const info = reminderInfo.info;
+	const period = info.period;
+	const recallDelay = reminderInfo.recallDelay;
 	
 	if (info.status == RaidStatus.Running) {
-		const runningDuration = millisecondsBetween(now, info.period.end);
-		const safetyDuration = parseDuration(safety.recall.delay.afterRun).milliseconds();
-		const recallDelay = safe.recallDelay(runningDuration + safetyDuration);
-		log('rappel pour '+formatTime(info.period.start)+', prochain check dans '+formatDuration(recallDelay));
+		const start = formatTime(period.start);
+		const delay = formatDuration(recallDelay);
+		log('rappel pour '+start+', prochain check dans '+delay);
 		const channel = client.channels.cache.get(channels.raids.id);
-		channel.send("@everyone Le raid de "+formatTime(info.period.start)+" est en cours !");
-		setTimeout(remindNextRaid, recallDelay);
+		channel.send("@everyone Le raid de "+start+" est en cours !");
 	} else {// Waiting case
-		const recallDelay = safe.recallDelay(info.remaining);
 		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
-		log('prochain raid ['+formatDate(info.period.start)+' ; '+formatDate(info.period.end)+'], prochain check dans '+formatDuration(recallDelay));
-		setTimeout(remindNextRaid, recallDelay);
+		const start = formatDate(period.start);
+		const end = formatDate(period.end);
+		const delay = formatDuration(recallDelay);
+		log('prochain raid ['+start+' ; '+end+'], prochain check dans '+delay);
 	}
+	return recallDelay;
 }
-client.once('ready', () => remindNextRaid());
+reminder.start(nextRaidReminder);
 
 /********
  * MAIN *
@@ -81,7 +92,6 @@ client.on('interactionCreate', async interaction => {
 	} else if (commandName === 'dev-source') {
 		await interaction.reply("Mon code source se trouve là :\nhttps://github.com/Sazaju/nationalfam-bot");
 	} else if (commandName === 'raid') {
-		// TODO Only in raid channel
 		await interaction.reply(raidInfoFor(interaction.user));
 	}
 });

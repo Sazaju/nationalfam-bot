@@ -43,11 +43,12 @@ class RaidInfo {
 }
 
 class RaidInfoFactory {
-	constructor(raids) {
+	constructor(raids, recallDelayAfterRun) {
 		this.raids = raids;
+		this.recallDelayAfterRun = recallDelayAfterRun;
 	}
 	
-	at(date) {
+	infoAt(date) {
 		const periods = this.raids.map(raid => raid.atDayOf(date));
 		const remaining = periods.filter(period => !period.isBefore(date));
 		const nextRaid = remaining.length > 0 ? remaining[0] : periods[0].nextDay();
@@ -55,7 +56,16 @@ class RaidInfoFactory {
 		return new RaidInfo(nextRaid, dateInfo.status, dateInfo.remaining);
 	}
 	
-	static fromStartsAndDuration(starts, duration) {
+	reminderAt(date) {
+		const info = this.infoAt(date);
+		var recallDelay = info.remaining + (info.status == RaidStatus.Running ? this.recallDelayAfterRun : 0);
+		return {
+			info: info,
+			recallDelay: recallDelay,
+		};
+	}
+	
+	static parse(starts, duration, recallDelayAfterRun) {
 		const raidDuration = parseDuration(duration).milliseconds();
 		const raids = starts.map(str => {
 			return {
@@ -66,7 +76,8 @@ class RaidInfoFactory {
 				}
 			};
 		});
-		return new RaidInfoFactory(raids);
+		const recallDelay = parseDuration(recallDelayAfterRun).milliseconds();
+		return new RaidInfoFactory(raids, recallDelay);
 	}
 }
 
