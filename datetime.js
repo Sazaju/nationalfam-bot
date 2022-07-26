@@ -56,6 +56,10 @@ function millisecondsBetween(date1, date2) {
 	return date2.getTime() - date1.getTime();
 }
 
+function nextDayOf(date) {
+	return new Date(date.getTime() + 24*hour);
+}
+
 function formatTime(date) {
 	var hours = date.getHours();
 	var minutes = date.getMinutes();
@@ -85,6 +89,7 @@ module.exports = {
 	second,
 	
 	millisecondsBetween,
+	nextDayOf,
 	
 	parseDuration,
 	parseTime,

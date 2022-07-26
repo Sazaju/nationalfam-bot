@@ -1,4 +1,4 @@
-const { hour, minute, second, parseDuration, parseTime, millisecondsBetween } = require('./datetime.js');
+const { parseDuration, parseTime, millisecondsBetween, nextDayOf } = require('./datetime.js');
 
 const RaidStatus = Object.freeze({
 	Waiting: "Waiting",
@@ -20,8 +20,8 @@ class RaidPeriod {
 	}
 	
 	nextDay() {
-		const start = new Date(this.start.getTime() + 24*hour);
-		const end = new Date(this.end.getTime() + 24*hour);
+		const start = nextDayOf(this.start);
+		const end = nextDayOf(this.end);
 		return new RaidPeriod(start, end);
 	}
 	
