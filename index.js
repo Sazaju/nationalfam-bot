@@ -18,16 +18,17 @@ client.once('ready', () => {
  * UTILS *
  *********/
 
-const safe = Safety.fromDurations(
-	safety.recall.delay.min,
-	safety.recall.delay.max
-);
-
 function log(message) {
 	const now = new Date();
 	const time = now.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 	console.log(time + ': ' + message);
 }
+
+const safe = Safety.fromDurations(
+	safety.recall.delay.min,
+	safety.recall.delay.max,
+	log
+);
 
 const reminder = new Reminder(
 	() => new Date(),
@@ -107,6 +108,18 @@ class WarInfoFactory {
 		return new WarInfo(datedPhase, nextPhase, remaining);
 	}
 	
+	reminderAt(date) {
+		const info = this.infoAt(date);
+		var recallDelay = info.remaining;// TODO add margin?
+		const reminderMargin = parseDuration("PT5M").milliseconds();
+		
+		return {
+			info: info,
+			shouldNotice: (info.nextPhase.isBattle || info.nextPhase.isDeclaration) && info.remaining <= reminderMargin,
+			recallDelay: recallDelay,
+		};
+	}
+	
 	static parse(start, duration, phases, rest) {
 		// TODO start
 		// TODO duration
@@ -121,6 +134,7 @@ class WarInfoFactory {
 					start: parseTime(phase.start).atDayOf(date),
 					end: parseTime(phase.end).atDayOf(date),
 					isBattle: key == "battle",
+					isDeclaration: key == "declaration",
 				};
 			});
 			return datedPhases;
@@ -135,45 +149,64 @@ function warInfoFor(user) {
 	
 	const now = new Date();
 	const info = warInfo.infoAt(now);
-	if (!info.phase.isBattle) {
-		const remaining = formatDuration(info.remaining);
-		const nextStart = formatTime(info.nextPhase.start);
-		return "Phase "+info.phase.name+", "+remaining+" avant la phase "+info.nextPhase.name+" à "+nextStart;
-	} else {
+	if (info.phase.isBattle) {
 		const remaining = formatDuration(info.remaining);
 		const end = formatTime(info.phase.end);
 		return "Que fais-tu encore là "+username+" ?\nLa guerre est en cours !\n"+remaining+" avant la fin de la phase "+info.phase.name+" à "+end;
+	} else if (info.phase.isDeclaration) {
+		const remaining = formatDuration(info.remaining);
+		const end = formatTime(info.phase.end);
+		return "Les déclarations d'attaque de château sont en cours !\n"+remaining+" avant la fin de la phase "+info.phase.name+" à "+end;
+	} else {
+		const remaining = formatDuration(info.remaining);
+		const nextStart = formatTime(info.nextPhase.start);
+		return "Phase "+info.phase.name+", "+remaining+" avant la phase "+info.nextPhase.name+" à "+nextStart;
 	}
 }
 
-/*
 // TODO rappel bataille
 // TODO rappel déclaration
 // TODO commande pour indiquer quoi déclarer
 // TODO commande pour indiquer quoi combattre
-function nextRaidReminder(now) {
-	const reminderInfo = raidInfo.reminderAt(now);
+function nextWarReminder(now) {
+	now = new Date('2022-07-27T08:00+02:00');
+console.log(now);
+	const reminderInfo = warInfo.reminderAt(now);
+console.log(reminderInfo);
 	const info = reminderInfo.info;
-	const period = info.period;
+	const phase = info.phase;
 	const recallDelay = reminderInfo.recallDelay;
+	const reminderMargin = parseDuration("PT5M").milliseconds();
+console.log(reminderMargin);
 	
-	if (info.status == RaidStatus.Running) {
-		const start = formatTime(period.start);
-		const delay = formatDuration(recallDelay);
-		log('rappel pour '+start+', prochain check dans '+delay);
-		const channel = client.channels.cache.get(channels.raids.id);
-		channel.send("@everyone Le raid de "+start+" est en cours !");
-	} else {// Waiting case
+	if (info.shouldNotice) {
+		if (info.nextPhase.isDeclaration) {
+			const start = formatTime(phase.start);
+			const delay = formatDuration(recallDelay);
+			const remaining = formatDuration(info.remaining);
+			log('rappel de '+info.nextPhase.name+' à '+start+', prochain check dans '+delay);
+			const channel = client.channels.cache.get(channels.war.id);
+			channel.send("@everyone La phase "+info.nextPhase.name+" débute dans "+remaining+" ! Visez vos châteaux !");
+		} else if (info.nextPhase.isBattle) {
+			const start = formatTime(phase.start);
+			const delay = formatDuration(recallDelay);
+			const remaining = formatDuration(info.remaining);
+			log('rappel de '+info.nextPhase.name+' à '+start+', prochain check dans '+delay);
+			const channel = client.channels.cache.get(channels.war.id);
+			channel.send("@everyone La phase "+info.nextPhase.name+" débute dans "+remaining+" ! Préparez vos troupes !");
+		} else {
+			throw new Error("Notice demandée pendant une phase "+info.phase.name);
+		}
+	} else {
 		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
-		const start = formatDate(period.start);
-		const end = formatDate(period.end);
+		const start = formatDate(phase.start);
+		const end = formatDate(phase.end);
 		const delay = formatDuration(recallDelay);
-		log('prochain raid ['+start+' ; '+end+'], prochain check dans '+delay);
+		log('phase de guerre '+info.phase.name+' ['+start+' ; '+end+'], prochain check dans '+delay);
 	}
 	return recallDelay;
 }
-reminder.start(nextRaidReminder);
- */
+reminder.start(nextWarReminder);
 
 /********
  * MAIN *

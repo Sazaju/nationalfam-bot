@@ -8,7 +8,9 @@ class Reminder {
 	start(fn) {
 		const functionWithRecall = () => {
 			const recallDelay = fn(this.createDate());
-			this.recall(functionWithRecall, recallDelay);
+			if (recallDelay !== undefined) {
+				this.recall(functionWithRecall, recallDelay);
+			}
 		};
 		this.firstCall(functionWithRecall);
 	}

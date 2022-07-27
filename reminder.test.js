@@ -5,6 +5,7 @@ test('Reminder calls', () => {
 	const firstCallDate = new Date(1);
 	const secondCallDate = new Date(2);
 	const thirdCallDate = new Date(3);
+	const lastCallDate = new Date(4);
 	
 	// Prepare reminder
 	const requestedCalls = [];
@@ -17,7 +18,7 @@ test('Reminder calls', () => {
 	
 	// Prepare function to remind
 	const calls = [];
-	const delay = 123;
+	var delay = 123;
 	const fn = date => {
 		calls.push(date);
 		return delay;
@@ -43,6 +44,11 @@ test('Reminder calls', () => {
 		expect(requestedCalls.length).toBe(1);
 		expect(requestedCalls[0].delay).toBe(delay);
 	};
+	const expectToExecuteCallAndNoMoreRequest = callDate => {
+		expect(calls.length).toBe(1);
+		expect(calls[0]).toBe(callDate);
+		expect(requestedCalls.length).toBe(0);
+	};
 	
 	// Start reminder
 	fnCalled = false;
@@ -60,4 +66,9 @@ test('Reminder calls', () => {
 	// Simulate third call
 	executeNextRequestedCall(thirdCallDate);
 	expectToExecuteCallAndRequestNext(thirdCallDate);
+	
+	// Simulate last call (no delay)
+	delay = undefined;
+	executeNextRequestedCall(lastCallDate);
+	expectToExecuteCallAndNoMoreRequest(lastCallDate);
 });

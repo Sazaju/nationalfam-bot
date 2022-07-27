@@ -1,7 +1,8 @@
-const { parseDuration } = require('./datetime.js');
+const { parseDuration, formatDuration } = require('./datetime.js');
 
 class Safety {
-	constructor(minRecallDelay, maxRecallDelay) {
+	constructor(minRecallDelay, maxRecallDelay, logger = msg => {}) {
+		this.log = logger;
 		this.recall = {
 				delay: {
 					min: minRecallDelay,
@@ -12,13 +13,22 @@ class Safety {
 	
 	recallDelay(delay) {
 		const limits = this.recall.delay;
-		return Math.max(limits.min, Math.min(delay, limits.max));
+		if (delay < limits.min) {
+			this.log("recall after "+formatDuration(delay)+" too low, replace by "+formatDuration(limits.min));
+			return limits.min;
+		}
+		if (delay > limits.max) {
+			this.log("recall after "+formatDuration(delay)+" too high, replace by "+formatDuration(limits.max));
+			return limits.max;
+		}
+		return delay;
 	}
 	
-	static fromDurations(minRecallDelay, maxRecallDelay) {
+	static fromDurations(minRecallDelay, maxRecallDelay, logger = msg => {}) {
 		return new Safety(
 			parseDuration(minRecallDelay).milliseconds(),
-			parseDuration(maxRecallDelay).milliseconds()
+			parseDuration(maxRecallDelay).milliseconds(),
+			logger
 		);
 	}
 }
