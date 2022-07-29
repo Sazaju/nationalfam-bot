@@ -143,6 +143,7 @@ class WarInfoFactory {
 	}
 }
 const warInfo = WarInfoFactory.parse(war.start, war.duration, war.phases, war.rest);
+warInfo.hasNoticed = nextInfo => false;
 function warInfoFor(user) {
 	const username = user.username;
 	log("infos de guerre d'alliance demandées par "+username);
@@ -169,34 +170,35 @@ function warInfoFor(user) {
 // TODO commande pour indiquer quoi déclarer
 // TODO commande pour indiquer quoi combattre
 function nextWarReminder(now) {
-	now = new Date('2022-07-27T08:00+02:00');
-console.log(now);
+	now = new Date('2022-07-27T20:59+02:00');
 	const reminderInfo = warInfo.reminderAt(now);
-console.log(reminderInfo);
 	const info = reminderInfo.info;
 	const phase = info.phase;
 	const recallDelay = reminderInfo.recallDelay;
-	const reminderMargin = parseDuration("PT5M").milliseconds();
-console.log(reminderMargin);
 	
-	if (info.shouldNotice) {
+	// TODO Simplifier
+	if (reminderInfo.shouldNotice && !warInfo.hasNoticed(info)) {
 		if (info.nextPhase.isDeclaration) {
+			const nextPhase = info.nextPhase.name;
 			const start = formatTime(phase.start);
 			const delay = formatDuration(recallDelay);
 			const remaining = formatDuration(info.remaining);
-			log('rappel de '+info.nextPhase.name+' à '+start+', prochain check dans '+delay);
+			log('rappel de '+nextPhase+' à '+start+', prochain check dans '+delay);
 			const channel = client.channels.cache.get(channels.war.id);
-			channel.send("@everyone La phase "+info.nextPhase.name+" débute dans "+remaining+" ! Visez vos châteaux !");
+			channel.send("@everyone La phase "+nextPhase+" débute dans "+remaining+" ! Visez vos châteaux !");
 		} else if (info.nextPhase.isBattle) {
+			const nextPhase = info.nextPhase.name;
 			const start = formatTime(phase.start);
 			const delay = formatDuration(recallDelay);
 			const remaining = formatDuration(info.remaining);
-			log('rappel de '+info.nextPhase.name+' à '+start+', prochain check dans '+delay);
+			log('rappel de '+nextPhase+' à '+start+', prochain check dans '+delay);
 			const channel = client.channels.cache.get(channels.war.id);
-			channel.send("@everyone La phase "+info.nextPhase.name+" débute dans "+remaining+" ! Préparez vos troupes !");
+			channel.send("@everyone La phase "+nextPhase+" débute dans "+remaining+" ! Préparez vos troupes !");
 		} else {
 			throw new Error("Notice demandée pendant une phase "+info.phase.name);
 		}
+		const idOf = info => info.nextPhase.start.getTime();
+		warInfo.hasNoticed = nextInfo => idOf(nextInfo) == idOf(info);
 	} else {
 		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 		const start = formatDate(phase.start);
@@ -226,6 +228,7 @@ client.on('interactionCreate', async interaction => {
 	} else if (commandName === 'guerre') {
 		await interaction.reply(warInfoFor(interaction.user));
 	}
+	// TODO calcul points d'évènement
 	// TODO rappel perso générique
 });
 
