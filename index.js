@@ -66,7 +66,7 @@ function nextRaidReminder(now) {
 		const delay = formatDuration(recallDelay);
 		log('rappel pour '+start+', prochain check dans '+delay);
 		const channel = client.channels.cache.get(channels.raids.id);
-		channel.send("@Notif Le raid de "+start+" est en cours !");
+		channel.send("@here Le raid de "+start+" est en cours !");
 	} else {// Waiting case
 		var formatDate = date => date.toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 		const start = formatDate(period.start);
